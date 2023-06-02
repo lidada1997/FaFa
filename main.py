@@ -120,19 +120,19 @@ def send_message(to_user, access_token, city_name, weather, max_temperature, min
     today = datetime.date(datetime(year=year, month=month, day=day))
     week = week_list[today.isoweekday() % 7]
     # 获取认识的日子的日期格式
+    together_year = int(config["together_date"].split("-")[0])
+    together_month = int(config["together_date"].split("-")[1])
+    together_day = int(config["together_date"].split("-")[2])
+    together_date = date(together_year, together_month, together_day)
+    # 获取认识的日期差
+    together_days = str(today.__sub__(together_date)).split(" ")[0]
+    # 获取在一起的日子的日期格式
     love_year = int(config["love_date"].split("-")[0])
     love_month = int(config["love_date"].split("-")[1])
     love_day = int(config["love_date"].split("-")[2])
     love_date = date(love_year, love_month, love_day)
-    # 获取认识的日期差
-    love_days = str(today.__sub__(love_date)).split(" ")[0]
-    # 获取在一起的日子的日期格式
-    love_year2 = int(config["love_date2"].split("-")[0])
-    love_month2 = int(config["love_date2"].split("-")[1])
-    love_day2 = int(config["love_date2"].split("-")[2])
-    love_date2 = date(love_year2, love_month2, love_day2)
     # 获取在一起的日期差
-    love_days2 = str(today.__sub__(love_date2)).split(" ")[0]
+    love_days = str(today.__sub__(love_date)).split(" ")[0]
     # 获取所有生日数据
     birthdays = {}
     for k, v in config.items():
@@ -164,12 +164,12 @@ def send_message(to_user, access_token, city_name, weather, max_temperature, min
                 "value": max_temperature,
                 "color": get_color()
             },
-            "love_day": {
-                "value": love_days,
+            "together_day": {
+                "value": together_days,
                 "color": get_color()
             },
-            "love_day2": {
-                "value": love_days2,
+            "love_day": {
+                "value": love_days,
                 "color": get_color()
             },
             "note_en": {
