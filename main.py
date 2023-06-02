@@ -168,7 +168,7 @@ def send_message(to_user, access_token, city_name, weather, max_temperature, min
                 "value": love_days,
                 "color": get_color()
             },
-            "love2_day": {
+            "love_day2": {
                 "value": love_days2,
                 "color": get_color()
             },
