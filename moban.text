@@ -1,11 +1,12 @@
-{{date.DATA}} 
+📅日期：{{date.DATA}} 
 🏙️城市：{{city.DATA}}
 ☁️天气：{{weather.DATA}} 
 🌡️气温：{{min_temperature.DATA}} °C 到{{max_temperature.DATA}} °C 
 💍今天是我们结婚第{{wedding_date.DATA}}天
 💑今天是我们恋爱第{{love_day.DATA}}天
 🧑‍🤝‍🧑今天是我们相遇第{{together_date.DATA}}天
-🎂生日：{{birthday.DATA}}
+🎂生日：{{birthday1.DATA}}
+🎂生日：{{birthday2.DATA}}
 💪每日鸡血：{{note_ch.DATA}}
 
 🔥{{weibo_hot[0].DATA}}
