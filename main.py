@@ -8,13 +8,6 @@ import sys
 import os
 
 
-def get_color():
-    # 获取随机颜色
-    get_colors = lambda n: list(map(lambda i: "#" + "%06x" % random.randint(0, 0xFFFFFF), range(n)))
-    color_list = get_colors(100)
-    return random.choice(color_list)
-
-
 def get_access_token():
     # appId
     app_id = config["app_id"]
@@ -111,7 +104,32 @@ def get_ciba():
     return note_ch, note_en
 
 
-def send_message(to_user, access_token, city_name, weather, max_temperature, min_temperature, note_ch, note_en):
+def get_weibo_hot(limit=5):
+    url = "https://tea.qingnian8.com/tools/weiboHot"
+    headers = {
+        'Content-Type': 'application/json',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
+                      'AppleWebKit/537.36 (KHTML, like Gecko) Chrome/103.0.0.0 Safari/537.36'
+    }
+    try:
+        r = get(url, headers=headers, timeout=5)
+        data = r.json()
+        if data.get("errCode") != 0 or "data" not in data:
+            return "获取微博热搜失败"
+        items = data["data"][:limit]
+        lines = []
+        for item in items:
+            rank = item.get("rank")
+            keyword = item.get("keyword")
+            if rank is None or keyword is None:
+                continue
+            lines.append(f"{rank}. {keyword}")
+        return "\n".join(lines) if lines else "暂无微博热搜数据"
+    except Exception:
+        return "获取微博热搜失败"
+
+
+def send_message(to_user, access_token, city_name, weather, max_temperature, min_temperature, note_ch, note_en, weibo_hot):
     url = "https://api.weixin.qq.com/cgi-bin/message/template/send?access_token={}".format(access_token)
     week_list = ["星期日", "星期一", "星期二", "星期三", "星期四", "星期五", "星期六"]
     year = localtime().tm_year
@@ -142,43 +160,33 @@ def send_message(to_user, access_token, city_name, weather, max_temperature, min
         "touser": to_user,
         "template_id": config["template_id"],
         "url": "http://weixin.qq.com/download",
-        "topcolor": "#FF0000",
         "data": {
             "date": {
-                "value": "{} {}".format(today, week),
-                "color": get_color()
+                "value": "{} {}".format(today, week)
             },
             "city": {
-                "value": city_name,
-                "color": get_color()
+                "value": city_name
             },
             "weather": {
-                "value": weather,
-                "color": get_color()
+                "value": weather
             },
             "min_temperature": {
-                "value": min_temperature,
-                "color": get_color()
+                "value": min_temperature
             },
             "max_temperature": {
-                "value": max_temperature,
-                "color": get_color()
+                "value": max_temperature
             },
             "together_day": {
-                "value": together_days,
-                "color": get_color()
+                "value": together_days
             },
             "love_day": {
-                "value": love_days,
-                "color": get_color()
+                "value": love_days
             },
             "note_en": {
-                "value": note_en,
-                "color": get_color()
+                "value": note_en
             },
             "note_ch": {
-                "value": note_ch,
-                "color": get_color()
+                "value": f"{note_ch}\n\n微博热搜：\n{weibo_hot}"
             }
         }
     }
@@ -190,7 +198,7 @@ def send_message(to_user, access_token, city_name, weather, max_temperature, min
         else:
             birthday_data = "距离{}的生日还有{}天".format(value["name"], birth_day)
         # 将生日数据插入data
-        data["data"][key] = {"value": birthday_data, "color": get_color()}
+        data["data"][key] = {"value": birthday_data}
     headers = {
         'Content-Type': 'application/json',
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
@@ -231,7 +239,9 @@ if __name__ == "__main__":
     weather, max_temperature, min_temperature = get_weather(province, city)
     # 获取词霸每日金句
     note_ch, note_en = get_ciba()
+    # 获取微博热搜
+    weibo_hot = get_weibo_hot(5)
     # 公众号推送消息
     for user in users:
-        send_message(user, accessToken, city, weather, max_temperature, min_temperature, note_ch, note_en)
+        send_message(user, accessToken, city, weather, max_temperature, min_temperature, note_ch, note_en, weibo_hot)
     os.system("pause")
