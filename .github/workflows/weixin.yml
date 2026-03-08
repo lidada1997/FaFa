@@ -2,8 +2,9 @@ name: weixin
 on:
   workflow_dispatch:
   schedule: 
-    # 代表国际标准时间0点0分，北京时间需要+8小时，代表北京时间中午12点运行
-    - cron: '0 0 * * *'
+  # GitHub Actions 使用 UTC 时间。
+  # 22 0 * * * 表示 UTC 22:00（对应北京时间次日早上 6:00）每天运行一次。
+    - cron: '0 20 * * *'
 jobs:
 #将工作流程中运行的所有作业组合在一起
   build:

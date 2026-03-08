@@ -115,21 +115,23 @@ def get_weibo_hot(limit=5):
         r = get(url, headers=headers, timeout=5)
         data = r.json()
         if data.get("errCode") != 0 or "data" not in data:
-            return "获取微博热搜失败"
-        items = data["data"][:limit]
-        lines = []
+            return []
+        items = data["data"]
+        results = []
         for item in items:
             rank = item.get("rank")
             keyword = item.get("keyword")
             if rank is None or keyword is None:
                 continue
-            lines.append(f"{rank}. {keyword}")
-        return "\n".join(lines) if lines else "暂无微博热搜数据"
+            results.append(f"{rank}. {keyword}")
+            if len(results) >= limit:
+                break
+        return results
     except Exception:
-        return "获取微博热搜失败"
+        return []
 
 
-def send_message(to_user, access_token, city_name, weather, max_temperature, min_temperature, note_ch, note_en, weibo_hot):
+def send_message(to_user, access_token, city_name, weather, max_temperature, min_temperature, note_ch, note_en, weibo_hot_list):
     url = "https://api.weixin.qq.com/cgi-bin/message/template/send?access_token={}".format(access_token)
     week_list = ["星期日", "星期一", "星期二", "星期三", "星期四", "星期五", "星期六"]
     year = localtime().tm_year
@@ -151,11 +153,24 @@ def send_message(to_user, access_token, city_name, weather, max_temperature, min
     love_date = date(love_year, love_month, love_day)
     # 获取在一起的日期差
     love_days = str(today.__sub__(love_date)).split(" ")[0]
+    # 获取结婚日的日期格式
+    wedding_year = int(config["wedding_date"].split("-")[0])
+    wedding_month = int(config["wedding_date"].split("-")[1])
+    wedding_day = int(config["wedding_date"].split("-")[2])
+    wedding_date = date(wedding_year, wedding_month, wedding_day)
+    # 获取结婚的日期差
+    wedding_days = str(today.__sub__(wedding_date)).split(" ")[0]
     # 获取所有生日数据
     birthdays = {}
     for k, v in config.items():
         if k[0:5] == "birth":
             birthdays[k] = v
+    # 微博热搜文本（整体一块），便于在模板里用 {{weibo_hot.DATA}} 一次性展示全部
+    if weibo_hot_list:
+        weibo_hot_text = "\n".join(weibo_hot_list)
+    else:
+        weibo_hot_text = "暂无微博热搜数据"
+
     data = {
         "touser": to_user,
         "template_id": config["template_id"],
@@ -179,17 +194,28 @@ def send_message(to_user, access_token, city_name, weather, max_temperature, min
             "together_day": {
                 "value": together_days
             },
+            "together_date": {
+                "value": together_days
+            },
             "love_day": {
                 "value": love_days
+            },
+            "wedding_date": {
+                "value": wedding_days
             },
             "note_en": {
                 "value": note_en
             },
             "note_ch": {
-                "value": f"{note_ch}\n\n微博热搜：\n{weibo_hot}"
+                "value": note_ch
             }
         }
     }
+    # 逐条微博热搜，配合模板里的 {{weibo_hot[0].DATA}} 形式使用
+    for idx in range(5):
+        value = weibo_hot_list[idx] if idx < len(weibo_hot_list) else ""
+        data["data"][f"weibo_hot[{idx}]"] = {"value": value}
+    birthday_summary_lines = []
     for key, value in birthdays.items():
         # 获取距离下次生日的时间
         birth_day = get_birthday(value["birthday"], year, today)
@@ -199,6 +225,9 @@ def send_message(to_user, access_token, city_name, weather, max_temperature, min
             birthday_data = "距离{}的生日还有{}天".format(value["name"], birth_day)
         # 将生日数据插入data
         data["data"][key] = {"value": birthday_data}
+        birthday_summary_lines.append(birthday_data)
+    if birthday_summary_lines:
+        data["data"]["birthday"] = {"value": "\n".join(birthday_summary_lines)}
     headers = {
         'Content-Type': 'application/json',
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
@@ -240,8 +269,8 @@ if __name__ == "__main__":
     # 获取词霸每日金句
     note_ch, note_en = get_ciba()
     # 获取微博热搜
-    weibo_hot = get_weibo_hot(5)
+    weibo_hot_list = get_weibo_hot(5)
     # 公众号推送消息
     for user in users:
-        send_message(user, accessToken, city, weather, max_temperature, min_temperature, note_ch, note_en, weibo_hot)
+        send_message(user, accessToken, city, weather, max_temperature, min_temperature, note_ch, note_en, weibo_hot_list)
     os.system("pause")
