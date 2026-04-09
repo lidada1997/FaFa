@@ -105,25 +105,27 @@ def get_ciba():
 
 
 def get_weibo_hot(limit=5):
-    url = "https://tea.qingnian8.com/tools/weiboHot"
+    url = "https://weibo.com/ajax/side/hotSearch"
     headers = {
-        'Content-Type': 'application/json',
+        'Accept': 'application/json, text/plain, */*',
+        'Referer': 'https://weibo.com/hot/search',
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
-                      'AppleWebKit/537.36 (KHTML, like Gecko) Chrome/103.0.0.0 Safari/537.36'
+                      'AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36'
     }
     try:
         r = get(url, headers=headers, timeout=5)
         data = r.json()
-        if data.get("errCode") != 0 or "data" not in data:
+        items = data.get("data", {}).get("realtime", [])
+        if not items:
             return []
-        items = data["data"]
         results = []
         for item in items:
-            rank = item.get("rank")
-            keyword = item.get("keyword")
-            if rank is None or keyword is None:
+            rank = item.get("realpos")
+            keyword = item.get("note") or item.get("word")
+            if not keyword:
                 continue
-            results.append(f"{rank}. {keyword}")
+            rank_text = f"{rank}. " if rank else ""
+            results.append(f"{rank_text}{keyword}")
             if len(results) >= limit:
                 break
         return results
@@ -208,13 +210,17 @@ def send_message(to_user, access_token, city_name, weather, max_temperature, min
             },
             "note_ch": {
                 "value": note_ch
+            },
+            "weibo_hot": {
+                "value": weibo_hot_text
             }
         }
     }
-    # 逐条微博热搜，配合模板里的 {{weibo_hot[0].DATA}} 形式使用
+    # ?????????????????
     for idx in range(5):
         value = weibo_hot_list[idx] if idx < len(weibo_hot_list) else ""
         data["data"][f"weibo_hot[{idx}]"] = {"value": value}
+        data["data"][f"weibo_hot_{idx + 1}"] = {"value": value}
     birthday_summary_lines = []
     for key, value in birthdays.items():
         # 获取距离下次生日的时间
