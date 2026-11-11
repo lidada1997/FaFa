@@ -1,10 +1,14 @@
 name: weixin
 on:
   workflow_dispatch:
-  schedule: 
-  # GitHub Actions 使用 UTC 时间。
-  # 22 0 * * * 表示 UTC 22:00（对应北京时间次日早上 6:00）每天运行一次。
-    - cron: '0 0 * * *'
+  schedule:
+  # GitHub Actions 使用 UTC 时间，且 schedule 在整点/跨日高峰会严重延迟（可能延迟数小时）。
+  # 目标：每天北京时间 8:00 推送。北京时间 8:00 == UTC 0:00。
+  # 这里故意把 cron 设在 UTC 23:30（北京 7:30），避开整点+跨日高峰；
+  # 真正的"8:00 准点发送"由 main.py 里的 wait_until_push_time() 控制等待。
+  # 即便 cron 延迟到 8:00 前几分钟才触发，程序仍能等到 8:00 准点发；
+  # 若 cron 延迟到 8:00 之后才触发，则立即发送（晚几分钟，远好于晚 4 小时）。
+    - cron: '30 23 * * *'
 jobs:
 #将工作流程中运行的所有作业组合在一起
   build:
