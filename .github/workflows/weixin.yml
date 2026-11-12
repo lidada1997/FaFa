@@ -2,18 +2,25 @@ name: weixin
 on:
   workflow_dispatch:
   schedule:
-  # GitHub Actions 使用 UTC 时间，且 schedule 在整点/跨日高峰会严重延迟（可能延迟数小时）。
-  # 目标：每天北京时间 8:00 推送。北京时间 8:00 == UTC 0:00。
-  # 这里故意把 cron 设在 UTC 23:30（北京 7:30），避开整点+跨日高峰；
-  # 真正的"8:00 准点发送"由 main.py 里的 wait_until_push_time() 控制等待。
-  # 即便 cron 延迟到 8:00 前几分钟才触发，程序仍能等到 8:00 准点发；
-  # 若 cron 延迟到 8:00 之后才触发，则立即发送（晚几分钟，远好于晚 4 小时）。
-    - cron: '30 23 * * *'
+    # 目标：每天北京时间 8:00 推送（UTC 0:00 == 北京 8:00）。
+    # GitHub Actions 的 schedule 不可靠（会延迟、甚至完全漏触发），单点 cron 经常漏。
+    # 策略：设 3 个错开的时间点冗余触发，配合下方 concurrency.cancel-in-progress，
+    # 后触发的 run 会取消正在 sleep 的前一个，接力等到 8:00 再发。
+    # 所有时间点都在 8:00 之前，保证 main.py 的 wait_until_push_time() 精确等到 8:00 推送。
+    # 只要任一时间点触发就能推到；三个点全漏才会失败（概率极低）。
+    - cron: '15 23 * * *'   # UTC 23:15 == 北京 7:15，最坏 sleep 45 分
+    - cron: '35 23 * * *'   # UTC 23:35 == 北京 7:35，最坏 sleep 25 分
+    - cron: '50 23 * * *'   # UTC 23:50 == 北京 7:50，最坏 sleep 10 分
+
+# 同一天多次触发只保留一个：后触发的取消正在 sleep 的前一个，由后者接力等到 8:00 推送
+concurrency:
+  group: weixin-daily-push
+  cancel-in-progress: true
+
 jobs:
-#将工作流程中运行的所有作业组合在一起
   build:
-  #定义名为 build 的作业。 子键将定义作业的属性 
     runs-on: ubuntu-24.04
+    timeout-minutes: 70
     steps:
       - uses: actions/checkout@v4
 
