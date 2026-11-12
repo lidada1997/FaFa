@@ -2,6 +2,7 @@
 🏙️城市：{{city.DATA}}
 ☁️天气：{{weather.DATA}} 
 🌡️气温：{{min_temperature.DATA}} °C 到{{max_temperature.DATA}} °C 
+👔今日提醒：{{dress_advice.DATA}}
 💍今天是我们结婚第{{wedding_date.DATA}}天
 💑今天是我们恋爱第{{love_day.DATA}}天
 🧑‍🤝‍🧑今天是我们相遇第{{together_date.DATA}}天
