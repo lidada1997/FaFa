@@ -25,6 +25,35 @@ def wait_until_push_time(target_hour=8, target_minute=0):
     sleep(delta)
 
 
+def already_pushed_today():
+    """检查今天是否已有成功的推送 run（排除当前 run），防止多 cron 冗余导致的重复推送。
+    仅在 GitHub Actions 环境下生效；本地运行无 token 时返回 False（不跳过）。"""
+    token = os.environ.get("GH_TOKEN")
+    repo = os.environ.get("GITHUB_REPOSITORY")
+    run_id = os.environ.get("GITHUB_RUN_ID")
+    if not token or not repo:
+        return False
+    url = "https://api.github.com/repos/{}/actions/runs?per_page=30&status=success".format(repo)
+    headers = {
+        "Authorization": "token {}".format(token),
+        "Accept": "application/vnd.github+json",
+        'User-Agent': 'weixin-push-check',
+    }
+    try:
+        r = get(url, headers=headers, timeout=10)
+        runs = r.json().get("workflow_runs", [])
+        today = date.today().isoformat()
+        for run in runs:
+            if str(run.get("id")) == run_id:
+                continue
+            created = (run.get("created_at") or "")[:10]
+            if created == today:
+                return True
+        return False
+    except Exception:
+        return False
+
+
 def get_access_token():
     # appId
     app_id = config["app_id"]
@@ -313,6 +342,11 @@ def send_message(to_user, access_token, city_name, weather, max_temperature, min
 if __name__ == "__main__":
     # cron 会提前到北京时间 7:30 左右触发，这里精确等到 8:00 再发送
     wait_until_push_time(8, 0)
+    # 多 cron 冗余触发时，给 concurrency cancel-in-progress 一点时间取消被取代的 run
+    sleep(10)
+    if already_pushed_today():
+        print("今天已有成功的推送 run，跳过本次以防重复")
+        sys.exit(0)
     try:
         with open("config.txt", encoding="utf-8") as f:
             config = eval(f.read())
