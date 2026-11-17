@@ -2,17 +2,17 @@ name: weixin
 on:
   workflow_dispatch:
   schedule:
-    # 目标：每天北京时间 8:00 推送（UTC 0:00 == 北京 8:00）。
-    # GitHub Actions 的 schedule 不可靠（会延迟、甚至完全漏触发），单点 cron 经常漏。
+    # 目标：每天北京时间 6:00 推送（UTC 22:00 == 北京 6:00）。
+    # GitHub Actions 的 schedule 不可靠（会延迟、甚至完全漏触发，如 11/17 三个点全漏）。
     # 策略：设 3 个错开的时间点冗余触发，配合下方 concurrency.cancel-in-progress，
-    # 后触发的 run 会取消正在 sleep 的前一个，接力等到 8:00 再发。
-    # 所有时间点都在 8:00 之前，保证 main.py 的 wait_until_push_time() 精确等到 8:00 推送。
-    # 只要任一时间点触发就能推到；三个点全漏才会失败（概率极低）。
-    - cron: '15 23 * * *'   # UTC 23:15 == 北京 7:15，最坏 sleep 45 分
-    - cron: '35 23 * * *'   # UTC 23:35 == 北京 7:35，最坏 sleep 25 分
-    - cron: '50 23 * * *'   # UTC 23:50 == 北京 7:50，最坏 sleep 10 分
+    # 后触发的 run 会取消正在 sleep 的前一个，接力等到 6:00 再发。
+    # 所有时间点都在 6:00 之前，保证 main.py 的 wait_until_push_time() 精确等到 6:00 推送。
+    # ⚠️ schedule 仍有漏触发风险，强烈建议配外部定时器触发 workflow_dispatch 兜底（见 README/对话）。
+    - cron: '15 21 * * *'   # UTC 21:15 == 北京 5:15，最坏 sleep 45 分
+    - cron: '35 21 * * *'   # UTC 21:35 == 北京 5:35，最坏 sleep 25 分
+    - cron: '50 21 * * *'   # UTC 21:50 == 北京 5:50，最坏 sleep 10 分
 
-# 同一天多次触发只保留一个：后触发的取消正在 sleep 的前一个，由后者接力等到 8:00 推送
+# 同一天多次触发只保留一个：后触发的取消正在 sleep 的前一个，由后者接力等到 6:00 推送
 concurrency:
   group: weixin-daily-push
   cancel-in-progress: true

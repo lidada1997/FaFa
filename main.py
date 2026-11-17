@@ -340,8 +340,8 @@ def send_message(to_user, access_token, city_name, weather, max_temperature, min
 
 
 if __name__ == "__main__":
-    # cron 会提前到北京时间 7:30 左右触发，这里精确等到 8:00 再发送
-    wait_until_push_time(8, 0)
+    # cron 会提前到北京时间 5:30 左右触发，这里精确等到 6:00 再发送
+    wait_until_push_time(6, 0)
     # 多 cron 冗余触发时，给 concurrency cancel-in-progress 一点时间取消被取代的 run
     sleep(10)
     if already_pushed_today():
